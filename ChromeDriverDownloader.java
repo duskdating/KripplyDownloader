@@ -11,7 +11,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 /**
  * @author Kripply.com
- * @version V1.0.0 - 08/29/2024 PUBLIC RELEASE
+ * @version V1.1.0 - 05/31/2025 PUBLIC RELEASE
  */
 public class ChromeDriverDownloader {
 
@@ -33,15 +33,11 @@ public class ChromeDriverDownloader {
             String chromeVersion = getChromeVersion(os);
 
             if (chromeVersion != null) {
-                //System.out.println("Installed Chrome version: " + chromeVersion);
-
                 // Extract the major version
                 String[] versionParts = chromeVersion.split("\\.");
                 int installedMajorVersion = Integer.parseInt(versionParts[0]);
-                //System.out.println("Installed Chrome major version: " + installedMajorVersion);
 
-                // Path to the target directory and version.txt file using
-                // OS-agnostic separators
+                // Path to the target directory and version.txt file using OS‑agnostic separators
                 String targetDirectory = Paths.get("resources", "drivers").toString();
                 String versionFilePath = Paths.get(targetDirectory, "version.txt").toString();
 
@@ -59,7 +55,7 @@ public class ChromeDriverDownloader {
 
                     String driverVersion;
                     if (installedMajorVersion > latestDriverMajorVersion) {
-                        // Use the chrome-for-testing site to get the compatible ChromeDriver version
+                        // Use the chrome‑for‑testing site to get the compatible ChromeDriver version
                         driverVersion = fetchCompatibleChromeDriverVersion(installedMajorVersion);
                     } else {
                         // Use the latest stable ChromeDriver version
@@ -70,7 +66,7 @@ public class ChromeDriverDownloader {
                         String downloadURL = String.format(
                                 "https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/%s/%s/chromedriver-%s.zip",
                                 driverVersion, getOsSpecificDriverName(os), getOsSpecificDriverName(os));
-                        System.out.println("Downloading beta ChromeDriver");
+                        System.out.println("Downloading ChromeDriver from: " + downloadURL);
 
                         // Download the ChromeDriver
                         String zipFilePath = "chromedriver.zip";
@@ -84,24 +80,14 @@ public class ChromeDriverDownloader {
                         writeVersionToFile(driverVersion, targetDirectory);
 
                         System.out.println("ChromeDriver update completed!");
-                        File fileToDelete = new File("chromedriver.zip");
-                        if (fileToDelete.exists()) {
-                            if (fileToDelete.delete()) {
-                                System.out.println("Removed: " + fileToDelete.getName());
-                            } else {
-                                System.err.println("Failed to remove: " + fileToDelete.getName());
-                            }
-                        } else {
-                            System.err.println("File not found: " + fileToDelete.getName());
-                        }
+                        Files.deleteIfExists(Paths.get(zipFilePath));
                         PdfPageImageSaver.main(new String[]{"chrome"});
                     } else {
                         System.out.println("Could not find a compatible ChromeDriver version.");
                     }
                 } else {
                     System.out.println("ChromeDriver is up to date.");
-                    // Call the main method of PNGToPDFConverter class
-                PdfPageImageSaver.main(new String[]{"chrome"});
+                    PdfPageImageSaver.main(new String[]{"chrome"});
                 }
             } else {
                 System.out.println("Chrome version could not be determined.");
@@ -112,65 +98,114 @@ public class ChromeDriverDownloader {
         }
     }
 
-    private static void updateEdgeDriver(String os) throws Exception {
-        String edgeVersion = getEdgeVersion(os);
+    /**
+     * Updated to download EdgeDriver from microsoft.com instead of azureedge.net.
+     */
+private static void updateEdgeDriver(String os) throws Exception {
+    String edgeVersion = getEdgeVersion(os);
 
-        if (edgeVersion != null) {
-            String[] parts = edgeVersion.split("\\.");
-            int installedMajorVersion = Integer.parseInt(parts[0]);
+    if (edgeVersion != null) {
+        String[] parts = edgeVersion.split("\\.");
+        int installedMajorVersion = Integer.parseInt(parts[0]);
 
-            String targetDirectory = Paths.get("resources", "drivers").toString();
-            String versionFilePath = Paths.get(targetDirectory, "version.txt").toString();
-            int currentVersion = readVersionFromFile(versionFilePath);
+        String targetDirectory = Paths.get("resources", "drivers").toString();
+        String versionFilePath = Paths.get(targetDirectory, "version.txt").toString();
+        int currentVersion = readVersionFromFile(versionFilePath);
 
-            if (currentVersion < installedMajorVersion) {
-                System.out.println("Updating EdgeDriver...");
+        if (currentVersion < installedMajorVersion) {
+            System.out.println("Updating EdgeDriver...");
 
-                String latestDriverVersion = fetchLatestEdgeDriverVersion();
-                if (latestDriverVersion == null || latestDriverVersion.isEmpty()) {
-                    System.out.println("Failed to fetch the latest EdgeDriver version. Skipping update.");
+            String latestDriverVersion = fetchLatestEdgeDriverVersion();
+            if (latestDriverVersion == null || latestDriverVersion.isEmpty()) {
+                System.out.println("Failed to fetch the latest EdgeDriver version. Skipping update.");
+                PdfPageImageSaver.main(new String[]{"edge"});
+                return;
+            }
+
+            int latestDriverMajorVersion = Integer.parseInt(latestDriverVersion.split("\\.")[0]);
+
+            String driverVersion;
+            if (installedMajorVersion > latestDriverMajorVersion) {
+                driverVersion = fetchCompatibleEdgeDriverVersion(installedMajorVersion);
+                if (driverVersion == null) {
+                    System.out.println("Could not find a compatible EdgeDriver version.");
+                    PdfPageImageSaver.main(new String[]{"edge"});
+                    return;
+                }
+            } else {
+                driverVersion = latestDriverVersion;
+            }
+
+            if (driverVersion != null) {
+                // Build a direct, OS‐specific download URL instead of the generic Azureedge link.
+                String arch = System.getProperty("os.arch").toLowerCase();
+                String downloadURL;
+
+                if (os.contains("win")) {
+                    // Windows: arm64, win64, or win32
+                    if (arch.contains("aarch64") || arch.contains("arm")) {
+                        // Windows ARM64
+                        downloadURL = String.format(
+                            "https://msedgedriver.microsoft.com/%s/edgedriver_arm64.zip",
+                            driverVersion
+                        );
+                    } else if (isWindows64Bit()) {
+                        // Windows 64‐bit
+                        downloadURL = String.format(
+                            "https://msedgedriver.microsoft.com/%s/edgedriver_win64.zip",
+                            driverVersion
+                        );
+                    } else {
+                        // Windows 32‐bit
+                        downloadURL = String.format(
+                            "https://msedgedriver.microsoft.com/%s/edgedriver_win32.zip",
+                            driverVersion
+                        );
+                    }
+                } else if (os.contains("mac")) {
+                    // macOS: intel (x64) or Apple Silicon (M1/ARM)
+                    if (arch.contains("aarch64") || arch.contains("arm")) {
+                        // Apple Silicon (M1)
+                        downloadURL = String.format(
+                            "https://msedgedriver.microsoft.com/%s/edgedriver_mac64_m1.zip",
+                            driverVersion
+                        );
+                    } else {
+                        // Intel mac64
+                        downloadURL = String.format(
+                            "https://msedgedriver.microsoft.com/%s/edgedriver_mac64.zip",
+                            driverVersion
+                        );
+                    }
+                } else {
+                    // Fallback (e.g., Linux) — you can adjust or leave as is
+                    System.out.println("Unsupported OS for direct EdgeDriver download URLs. Skipping update.");
                     PdfPageImageSaver.main(new String[]{"edge"});
                     return;
                 }
 
-                int latestDriverMajorVersion = Integer.parseInt(latestDriverVersion.split("\\.")[0]);
+                System.out.println("Downloading EdgeDriver from: " + downloadURL);
+                String zipFilePath = "edgedriver.zip";
+                downloadFile(downloadURL, zipFilePath);
 
-                String driverVersion;
-                if (installedMajorVersion > latestDriverMajorVersion) {
-                    driverVersion = fetchCompatibleEdgeDriverVersion(installedMajorVersion);
-                    if (driverVersion == null) {
-                        System.out.println("Could not find a compatible EdgeDriver version.");
-                        PdfPageImageSaver.main(new String[]{"edge"});
-                        return;
-                    }
-                } else {
-                    driverVersion = latestDriverVersion;
-                }
+                String driverFileName = os.contains("win") ? "msedgedriver.exe" : "msedgedriver";
+                extractAndMoveDriver(zipFilePath, targetDirectory, driverFileName);
 
-                if (driverVersion != null) {
-                    String downloadURL = String.format(
-                            "https://msedgedriver.azureedge.net/%s/edgedriver_%s.zip",
-                            driverVersion, getEdgeOsSpecificDriverName(os));
-                    String zipFilePath = "edgedriver.zip";
-                    downloadFile(downloadURL, zipFilePath);
-
-                    String driverFileName = os.contains("win") ? "msedgedriver.exe" : "msedgedriver";
-                    extractAndMoveDriver(zipFilePath, targetDirectory, driverFileName);
-
-                    writeVersionToFile(driverVersion, targetDirectory);
-                    new File(zipFilePath).delete();
-                    PdfPageImageSaver.main(new String[]{"edge"});
-                } else {
-                    System.out.println("Could not find a compatible EdgeDriver version.");
-                }
-            } else {
-                System.out.println("EdgeDriver is up to date.");
+                writeVersionToFile(driverVersion, targetDirectory);
+                new File(zipFilePath).delete();
                 PdfPageImageSaver.main(new String[]{"edge"});
+            } else {
+                System.out.println("Could not find a compatible EdgeDriver version.");
             }
         } else {
-            System.out.println("Edge version could not be determined.");
+            System.out.println("EdgeDriver is up to date.");
+            PdfPageImageSaver.main(new String[]{"edge"});
         }
+    } else {
+        System.out.println("Edge version could not be determined.");
     }
+}
+
 
     private static String getChromeVersion(String os) {
         String chromeVersion = null;
@@ -185,14 +220,9 @@ public class ChromeDriverDownloader {
                 command = new String[]{"google-chrome", "--version"};
             }
 
-            // Execute the command
             Process process = new ProcessBuilder(command).start();
-
-            // Read the output of the command
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
-
-            // Regular expression to match the version number
             Pattern pattern = Pattern.compile("(\\d+\\.\\d+\\.\\d+\\.\\d+)");
             while ((line = reader.readLine()) != null) {
                 Matcher matcher = pattern.matcher(line);
@@ -201,12 +231,10 @@ public class ChromeDriverDownloader {
                     break;
                 }
             }
-
             process.waitFor();
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return chromeVersion;
     }
 
@@ -231,10 +259,8 @@ public class ChromeDriverDownloader {
                 }
                 if (edgePath == null) {
                     edgePath = "microsoft-edge";
-                    command = new String[]{edgePath, "--version"};
-                } else {
-                    command = new String[]{edgePath, "--version"};
                 }
+                command = new String[]{edgePath, "--version"};
             } else {
                 command = new String[]{"microsoft-edge", "--version"};
             }
@@ -250,25 +276,23 @@ public class ChromeDriverDownloader {
                     break;
                 }
             }
-
             process.waitFor();
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return edgeVersion;
     }
 
     private static int readVersionFromFile(String versionFilePath) {
-        int version = -1; // Default to -1 if version.txt doesn't exist or is unreadable
+        int version = -1;
         try {
             Path versionFile = Paths.get(versionFilePath);
             if (Files.exists(versionFile)) {
-                String versionContent = new String(Files.readAllBytes(versionFile)).trim();
+                String versionContent = Files.readString(versionFile).trim();
                 version = Integer.parseInt(versionContent);
-                System.out.println("Current ChromeDriver version: " + version);
+                System.out.println("Current driver major version: " + version);
             } else {
-                System.out.println("version.txt file not found. Proceeding with update...");
+                System.out.println("version.txt not found, proceeding with fresh download...");
             }
         } catch (IOException | NumberFormatException e) {
             System.out.println("Error reading version.txt: " + e.getMessage());
@@ -277,16 +301,8 @@ public class ChromeDriverDownloader {
     }
 
     private static String fetchLatestChromeDriverVersion() {
-        try {
-            String url = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE";
-            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setRequestMethod("GET");
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String latestVersion = reader.readLine();
-            reader.close();
-
-            return latestVersion;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new URL("https://chromedriver.storage.googleapis.com/LATEST_RELEASE").openStream()))) {
+            return reader.readLine();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -295,10 +311,8 @@ public class ChromeDriverDownloader {
 
     private static String fetchCompatibleChromeDriverVersion(int majorVersion) {
         try {
-            String url = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json";
-            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            HttpURLConnection conn = (HttpURLConnection) new URL("https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json").openConnection();
             conn.setRequestMethod("GET");
-
             BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             StringBuilder jsonBuilder = new StringBuilder();
             String line;
@@ -306,13 +320,9 @@ public class ChromeDriverDownloader {
                 jsonBuilder.append(line);
             }
             reader.close();
-
-            JSONObject jsonObject = new JSONObject(jsonBuilder.toString());
-            JSONArray versionsArray = jsonObject.getJSONArray("versions");
-
+            JSONArray versionsArray = new JSONObject(jsonBuilder.toString()).getJSONArray("versions");
             for (int i = 0; i < versionsArray.length(); i++) {
-                JSONObject versionInfo = versionsArray.getJSONObject(i);
-                String version = versionInfo.getString("version");
+                String version = versionsArray.getJSONObject(i).getString("version");
                 if (version.startsWith(String.valueOf(majorVersion))) {
                     return version;
                 }
@@ -323,39 +333,6 @@ public class ChromeDriverDownloader {
         return null;
     }
 
-    private static String fetchLatestEdgeDriverVersion() {
-        try {
-            String url = "https://msedgedriver.azureedge.net/LATEST_RELEASE";
-            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setRequestMethod("GET");
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String latestVersion = reader.readLine();
-            reader.close();
-
-            return latestVersion;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private static String fetchCompatibleEdgeDriverVersion(int majorVersion) {
-        try {
-            String url = "https://msedgedriver.azureedge.net/LATEST_RELEASE_" + majorVersion;
-            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setRequestMethod("GET");
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String version = reader.readLine();
-            reader.close();
-
-            return version;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 
     private static String getOsSpecificDriverName(String os) {
         if (os.contains("win")) {
@@ -368,78 +345,72 @@ public class ChromeDriverDownloader {
         }
     }
 
+    /**
+     * Returns the correct archive suffix for EdgeDriver on microsoft.com.
+     */
     private static String getEdgeOsSpecificDriverName(String os) {
         if (os.contains("win")) {
+            if (isWindowsArm64()) return "arm64";
             return isWindows64Bit() ? "win64" : "win32";
         } else if (os.contains("mac")) {
             String arch = System.getProperty("os.arch");
             return arch.contains("aarch64") || arch.contains("arm") ? "mac64_m1" : "mac64";
         } else {
-            return "linux64";
+            return "linux64"; // linux builds are still provided
         }
     }
 
     private static boolean isWindows64Bit() {
-        // Check for 64-bit architecture on Windows
         String arch = System.getenv("PROCESSOR_ARCHITECTURE");
         String wow64Arch = System.getenv("PROCESSOR_ARCHITEW6432");
-        return arch != null && arch.endsWith("64") || wow64Arch != null && wow64Arch.endsWith("64");
+        return (arch != null && arch.endsWith("64")) || (wow64Arch != null && wow64Arch.endsWith("64"));
+    }
+
+    private static boolean isWindowsArm64() {
+        String arch = System.getenv("PROCESSOR_ARCHITECTURE");
+        String wow64Arch = System.getenv("PROCESSOR_ARCHITEW6432");
+        return (arch != null && arch.equalsIgnoreCase("ARM64")) || (wow64Arch != null && wow64Arch.equalsIgnoreCase("ARM64"));
     }
 
     private static void downloadFile(String fileURL, String savePath) throws Exception {
-        URL url = new URL(fileURL);
-        HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
+        HttpURLConnection httpConn = (HttpURLConnection) new URL(fileURL).openConnection();
         int responseCode = httpConn.getResponseCode();
-
-        // Check HTTP response code
         if (responseCode == HttpURLConnection.HTTP_OK) {
             try (BufferedInputStream in = new BufferedInputStream(httpConn.getInputStream());
                  FileOutputStream out = new FileOutputStream(savePath)) {
-
                 byte[] buffer = new byte[1024];
                 int bytesRead;
-
-                while ((bytesRead = in.read(buffer, 0, 1024)) != -1) {
+                while ((bytesRead = in.read(buffer)) != -1) {
                     out.write(buffer, 0, bytesRead);
                 }
             }
-
             System.out.println("File downloaded: " + savePath);
         } else {
-            System.out.println("No file to download. Server replied HTTP code: " + responseCode);
+            throw new IOException("Server returned non-OK status: " + responseCode);
         }
         httpConn.disconnect();
     }
 
     private static void extractAndMoveDriver(String zipFilePath, String targetDirectory, String driverFileName) throws IOException {
-        // Create the target directory if it does not exist
         Files.createDirectories(Paths.get(targetDirectory));
-
-        // Extract the ZIP file
         try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFilePath))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (entry.getName().endsWith(driverFileName)) {
-                    // Prepare the output file path
                     Path outputFile = Paths.get(targetDirectory, driverFileName);
-
-                    // Replace existing file if present
                     Files.copy(zis, outputFile, StandardCopyOption.REPLACE_EXISTING);
-                    System.out.println(driverFileName + " has been extracted to " + targetDirectory);
+                    System.out.println(driverFileName + " extracted to " + targetDirectory);
                     break;
                 }
             }
-        } catch (IOException e) {
-            System.out.println("Failed to extract the ZIP file: " + e.getMessage());
         }
     }
 
     private static void writeVersionToFile(String version, String targetDirectory) {
         try {
-            String majorVersion = version.split("\\.")[0];
             Path versionFile = Paths.get(targetDirectory, "version.txt");
-            Files.write(versionFile, majorVersion.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-            System.out.println("Driver version written to " + versionFile.toString());
+            Files.writeString(versionFile, version.split("\\.")[0], StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            System.out.println("Driver version written to " + versionFile);
         } catch (IOException e) {
             System.out.println("Failed to write version file: " + e.getMessage());
         }
