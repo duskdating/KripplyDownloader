@@ -164,17 +164,18 @@ public class ChromeDriverDownloader {
     private static String getChromeVersion(String os) {
         String chromeVersion = null;
         try {
-            String command;
+            String[] command;
             if (os.contains("win")) {
-                command = "reg query \"HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon\" /v version";
+                command = new String[]{"cmd", "/c", "reg query \"HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon\" /v version"};
             } else if (os.contains("mac")) {
-                command = "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --version";
+                String chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+                command = new String[]{chromePath, "--version"};
             } else {
-                command = "google-chrome --version";
+                command = new String[]{"google-chrome", "--version"};
             }
 
             // Execute the command
-            Process process = Runtime.getRuntime().exec(command);
+            Process process = new ProcessBuilder(command).start();
 
             // Read the output of the command
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -201,16 +202,33 @@ public class ChromeDriverDownloader {
     private static String getEdgeVersion(String os) {
         String edgeVersion = null;
         try {
-            String command;
+            String[] command;
             if (os.contains("win")) {
-                command = "reg query \"HKEY_CURRENT_USER\\Software\\Microsoft\\Edge\\BLBeacon\" /v version";
+                command = new String[]{"cmd", "/c", "reg query \"HKEY_CURRENT_USER\\Software\\Microsoft\\Edge\\BLBeacon\" /v version"};
             } else if (os.contains("mac")) {
-                command = "/Applications/Microsoft\\ Edge.app/Contents/MacOS/Microsoft\\ Edge --version";
+                String edgePath = null;
+                String[] candidates = {
+                        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+                        "/Applications/Microsoft Edge Beta.app/Contents/MacOS/Microsoft Edge Beta",
+                        "/Applications/Microsoft Edge Dev.app/Contents/MacOS/Microsoft Edge Dev"
+                };
+                for (String candidate : candidates) {
+                    if (new File(candidate).exists()) {
+                        edgePath = candidate;
+                        break;
+                    }
+                }
+                if (edgePath == null) {
+                    edgePath = "microsoft-edge";
+                    command = new String[]{edgePath, "--version"};
+                } else {
+                    command = new String[]{edgePath, "--version"};
+                }
             } else {
-                command = "microsoft-edge --version";
+                command = new String[]{"microsoft-edge", "--version"};
             }
 
-            Process process = Runtime.getRuntime().exec(command);
+            Process process = new ProcessBuilder(command).start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             Pattern pattern = Pattern.compile("(\\d+\\.\\d+\\.\\d+\\.\\d+)");
