@@ -161,6 +161,8 @@ public class ChromeDriverDownloader {
 
         // Remove any leading replacement characters or whitespace from the version
         driverVersion = stripLeadingReplacementChars(driverVersion == null ? "" : driverVersion.trim());
+        // Strip any other non-digit characters that may have slipped in
+        driverVersion = sanitizeVersionString(driverVersion);
 
         System.out.println("Resolved EdgeDriver version: " + driverVersion);
         String arch = System.getProperty("os.arch").toLowerCase();
@@ -341,7 +343,7 @@ public class ChromeDriverDownloader {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new URL(url).openStream()))) {
             String line = reader.readLine();
-            return stripLeadingReplacementChars(line == null ? null : line.trim());
+            return sanitizeVersionString(stripLeadingReplacementChars(line == null ? null : line.trim()));
         } catch (Exception e) {
             System.err.println("fetchLatestEdgeDriverVersion error: " + e.getMessage());
         }
@@ -359,7 +361,7 @@ public class ChromeDriverDownloader {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new URL(url).openStream()))) {
             String line = reader.readLine();
-            return stripLeadingReplacementChars(line == null ? null : line.trim());
+            return sanitizeVersionString(stripLeadingReplacementChars(line == null ? null : line.trim()));
         } catch (Exception e) {
             System.err.println("fetchCompatibleEdgeDriverVersion error: " + e.getMessage());
         }
@@ -374,6 +376,14 @@ public class ChromeDriverDownloader {
             return input.substring(2);
         }
         return input;
+    }
+
+    /**
+     * Removes any characters other than digits and dots from a version string.
+     */
+    private static String sanitizeVersionString(String input) {
+        if (input == null) return null;
+        return input.replaceAll("[^0-9.]", "");
     }
 
     /**
