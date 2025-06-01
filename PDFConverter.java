@@ -21,14 +21,32 @@ public class PDFConverter {
         // Directory containing images
         String compressedDirectory = "temp/compressed";
         String uncompressedDirectory = "temp/uncompressed";
-        // Check if there are files in compressed directory
+        // Ensure the input directories exist
         File compressed = new File(compressedDirectory);
-        // Get a list of all files in the input directory
         File uncompressed = new File(uncompressedDirectory);
+
+        if (!uncompressed.exists()) {
+            uncompressed.mkdirs();
+        }
+        if (!compressed.exists()) {
+            compressed.mkdirs();
+        }
+
+        // Get a list of all files in the input directory
         File[] files = uncompressed.listFiles();
+        if (files == null) {
+            files = new File[0];
+        }
         File[] compressedFiles = compressed.listFiles();
+        if (compressedFiles == null) {
+            compressedFiles = new File[0];
+        }
         // Output PDF file path
         String filePath = "PDF - OUTPUT/";
+        File outputDir = new File(filePath);
+        if (!outputDir.exists()) {
+            outputDir.mkdirs();
+        }
         String title = "ebook.pdf";
         
         // Get list of PNG image paths
@@ -39,9 +57,10 @@ public class PDFConverter {
             if (compressedFiles != null && compressedFiles.length > 0) {
                 imagePaths = getJpgImagesFromDirectory(compressedDirectory);
                 files = compressedFiles;
+            }
         } else {
             System.out.println("The specified path is not a valid directory.");
-        }}
+        }
         
         
         
