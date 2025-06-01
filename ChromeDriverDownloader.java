@@ -6,6 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.Scanner;
 import org.json.JSONArray;
 import org.json.JSONObject;
 /**
@@ -18,6 +19,17 @@ public class ChromeDriverDownloader {
         try {
             // Determine the operating system
             String os = System.getProperty("os.name").toLowerCase();
+
+            Scanner scanner = new Scanner(System.in);
+            System.out.println("Choose browser (chrome/edge) [chrome]: ");
+            String browser = scanner.nextLine().trim().toLowerCase();
+            boolean useEdge = browser.startsWith("edge");
+
+            if (useEdge) {
+                updateEdgeDriver(os);
+                return;
+            }
+
             String chromeVersion = getChromeVersion(os);
 
             if (chromeVersion != null) {
@@ -64,7 +76,7 @@ public class ChromeDriverDownloader {
                         downloadFile(downloadURL, zipFilePath);
 
                         // Extract the downloaded zip file and move the driver to the target folder
-                        String driverFileName = "chromedriver.exe";
+                        String driverFileName = os.contains("win") ? "chromedriver.exe" : "chromedriver";
                         extractAndMoveDriver(zipFilePath, targetDirectory, driverFileName);
 
                         // Write the version number to a text file
@@ -81,20 +93,70 @@ public class ChromeDriverDownloader {
                         } else {
                             System.err.println("File not found: " + fileToDelete.getName());
                         }
-                        PdfPageImageSaver.main(new String[]{});
+                        PdfPageImageSaver.main(new String[]{"chrome"});
                     } else {
                         System.out.println("Could not find a compatible ChromeDriver version.");
                     }
                 } else {
                     System.out.println("ChromeDriver is up to date.");
                     // Call the main method of PNGToPDFConverter class
-                PdfPageImageSaver.main(new String[]{});
+                PdfPageImageSaver.main(new String[]{"chrome"});
                 }
             } else {
                 System.out.println("Chrome version could not be determined.");
             }
+
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void updateEdgeDriver(String os) throws Exception {
+        String edgeVersion = getEdgeVersion(os);
+
+        if (edgeVersion != null) {
+            String[] parts = edgeVersion.split("\\.");
+            int installedMajorVersion = Integer.parseInt(parts[0]);
+
+            String targetDirectory = "resources/drivers";
+            String versionFilePath = targetDirectory + "/version.txt";
+            int currentVersion = readVersionFromFile(versionFilePath);
+
+            if (currentVersion < installedMajorVersion) {
+                System.out.println("Updating EdgeDriver...");
+
+                String latestDriverVersion = fetchLatestEdgeDriverVersion();
+                int latestDriverMajorVersion = Integer.parseInt(latestDriverVersion.split("\\.")[0]);
+
+                String driverVersion;
+                if (installedMajorVersion > latestDriverMajorVersion) {
+                    driverVersion = fetchCompatibleEdgeDriverVersion(installedMajorVersion);
+                } else {
+                    driverVersion = latestDriverVersion;
+                }
+
+                if (driverVersion != null) {
+                    String downloadURL = String.format(
+                            "https://msedgedriver.azureedge.net/%s/edgedriver_%s.zip",
+                            driverVersion, getEdgeOsSpecificDriverName(os));
+                    String zipFilePath = "edgedriver.zip";
+                    downloadFile(downloadURL, zipFilePath);
+
+                    String driverFileName = os.contains("win") ? "msedgedriver.exe" : "msedgedriver";
+                    extractAndMoveDriver(zipFilePath, targetDirectory, driverFileName);
+
+                    writeVersionToFile(driverVersion, targetDirectory);
+                    new File(zipFilePath).delete();
+                    PdfPageImageSaver.main(new String[]{"edge"});
+                } else {
+                    System.out.println("Could not find a compatible EdgeDriver version.");
+                }
+            } else {
+                System.out.println("EdgeDriver is up to date.");
+                PdfPageImageSaver.main(new String[]{"edge"});
+            }
+        } else {
+            System.out.println("Edge version could not be determined.");
         }
     }
 
@@ -133,6 +195,38 @@ public class ChromeDriverDownloader {
         }
 
         return chromeVersion;
+    }
+
+    private static String getEdgeVersion(String os) {
+        String edgeVersion = null;
+        try {
+            String command;
+            if (os.contains("win")) {
+                command = "reg query \"HKEY_CURRENT_USER\\Software\\Microsoft\\Edge\\BLBeacon\" /v version";
+            } else if (os.contains("mac")) {
+                command = "/Applications/Microsoft\\ Edge.app/Contents/MacOS/Microsoft\\ Edge --version";
+            } else {
+                command = "microsoft-edge --version";
+            }
+
+            Process process = Runtime.getRuntime().exec(command);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            Pattern pattern = Pattern.compile("(\\d+\\.\\d+\\.\\d+\\.\\d+)");
+            while ((line = reader.readLine()) != null) {
+                Matcher matcher = pattern.matcher(line);
+                if (matcher.find()) {
+                    edgeVersion = matcher.group(1);
+                    break;
+                }
+            }
+
+            process.waitFor();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return edgeVersion;
     }
 
     private static int readVersionFromFile(String versionFilePath) {
@@ -199,13 +293,59 @@ public class ChromeDriverDownloader {
         return null;
     }
 
+    private static String fetchLatestEdgeDriverVersion() {
+        try {
+            String url = "https://msedgedriver.azureedge.net/LATEST_RELEASE";
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setRequestMethod("GET");
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String latestVersion = reader.readLine();
+            reader.close();
+
+            return latestVersion;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private static String fetchCompatibleEdgeDriverVersion(int majorVersion) {
+        try {
+            String url = "https://msedgedriver.azureedge.net/LATEST_RELEASE_" + majorVersion;
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setRequestMethod("GET");
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String version = reader.readLine();
+            reader.close();
+
+            return version;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private static String getOsSpecificDriverName(String os) {
         if (os.contains("win")) {
             return isWindows64Bit() ? "win64" : "win32";
         } else if (os.contains("mac")) {
-            return "mac-x64";
+            String arch = System.getProperty("os.arch");
+            return arch.contains("aarch64") || arch.contains("arm") ? "mac-arm64" : "mac-x64";
         } else {
             return "linux-x64";
+        }
+    }
+
+    private static String getEdgeOsSpecificDriverName(String os) {
+        if (os.contains("win")) {
+            return isWindows64Bit() ? "win64" : "win32";
+        } else if (os.contains("mac")) {
+            String arch = System.getProperty("os.arch");
+            return arch.contains("aarch64") || arch.contains("arm") ? "mac64_m1" : "mac64";
+        } else {
+            return "linux64";
         }
     }
 
@@ -269,7 +409,7 @@ public class ChromeDriverDownloader {
             String majorVersion = version.split("\\.")[0];
             Path versionFile = Paths.get(targetDirectory, "version.txt");
             Files.write(versionFile, majorVersion.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-            System.out.println("ChromeDriver version written to " + versionFile.toString());
+            System.out.println("Driver version written to " + versionFile.toString());
         } catch (IOException e) {
             System.out.println("Failed to write version file: " + e.getMessage());
         }
