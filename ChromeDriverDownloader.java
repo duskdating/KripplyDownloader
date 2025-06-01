@@ -40,9 +40,10 @@ public class ChromeDriverDownloader {
                 int installedMajorVersion = Integer.parseInt(versionParts[0]);
                 //System.out.println("Installed Chrome major version: " + installedMajorVersion);
 
-                // Path to the target directory and version.txt file
-                String targetDirectory = "resources/drivers";
-                String versionFilePath = targetDirectory + "/version.txt";
+                // Path to the target directory and version.txt file using
+                // OS-agnostic separators
+                String targetDirectory = Paths.get("resources", "drivers").toString();
+                String versionFilePath = Paths.get(targetDirectory, "version.txt").toString();
 
                 // Check the version in version.txt
                 int currentDriverVersion = readVersionFromFile(versionFilePath);
@@ -118,8 +119,8 @@ public class ChromeDriverDownloader {
             String[] parts = edgeVersion.split("\\.");
             int installedMajorVersion = Integer.parseInt(parts[0]);
 
-            String targetDirectory = "resources/drivers";
-            String versionFilePath = targetDirectory + "/version.txt";
+            String targetDirectory = Paths.get("resources", "drivers").toString();
+            String versionFilePath = Paths.get(targetDirectory, "version.txt").toString();
             int currentVersion = readVersionFromFile(versionFilePath);
 
             if (currentVersion < installedMajorVersion) {

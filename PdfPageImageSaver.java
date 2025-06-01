@@ -12,6 +12,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.List;
 import java.util.Random;
@@ -28,7 +30,7 @@ public class PdfPageImageSaver {
         String os = System.getProperty("os.name").toLowerCase();
 
         String browser = (args.length > 0) ? args[0].toLowerCase() : "chrome";
-        String driverPath = "resources/drivers/" + (browser.equals("edge") ? "msedgedriver" : "chromedriver");
+        String driverPath = Paths.get("resources", "drivers", browser.equals("edge") ? "msedgedriver" : "chromedriver").toString();
 
         if (os.contains("win")) {
             driverPath += ".exe"; // Windows executable
@@ -54,12 +56,12 @@ public class PdfPageImageSaver {
         }
 
         // The target URL of the local index.html file
-        String url = new File("index.html").getAbsolutePath();  // Gets the absolute path of the local index.html
+        String url = Paths.get("index.html").toAbsolutePath().toString();  // Gets the absolute path of the local index.html
         String localUrl = "file:///" + url.replace("\\", "/");  // Converts the path to a file URL format
 
         // Read delay from settings file
         int delay = 50; // Default delay
-        File delayFile = new File("settings/delay.txt");
+        File delayFile = Paths.get("settings", "delay.txt").toFile();
         if (delayFile.exists()) {
             try (Scanner delayScanner = new Scanner(delayFile)) {
                 if (delayScanner.hasNextInt()) {
@@ -123,7 +125,7 @@ public class PdfPageImageSaver {
 
             // Save the webpage title to a file after tab selection
             String pageTitle = driver.getTitle();
-            File titleFile = new File("temp/title.txt");
+            File titleFile = Paths.get("temp", "title.txt").toFile();
             titleFile.getParentFile().mkdirs(); // Ensure the directory exists
             try (FileWriter writer = new FileWriter(titleFile)) {
                 writer.write(pageTitle);
@@ -138,7 +140,7 @@ public class PdfPageImageSaver {
             System.out.println("Total number of pages in PDF: " + totalPageCount);
 
             // Create the /temp/uncompressed directory if it doesn't exist
-            File pngDirectory = new File("temp/uncompressed");
+            File pngDirectory = Paths.get("temp", "uncompressed").toFile();
             if (!pngDirectory.exists()) {
                 pngDirectory.mkdir();
             }
@@ -196,7 +198,7 @@ public class PdfPageImageSaver {
                             }
 
                             // Use a unique filename for each canvas on the last page
-                            String filename = "temp/uncompressed/pdf_page_" + pageNumber + "_" + canvases.indexOf(canvas) + ".png";
+                            String filename = Paths.get("temp", "uncompressed", "pdf_page_" + pageNumber + "_" + canvases.indexOf(canvas) + ".png").toString();
                             ImageIO.write(image, "png", new File(filename));
                             System.out.println("Saved page " + pageNumber + " of " + totalPageCount);
 
@@ -213,7 +215,7 @@ public class PdfPageImageSaver {
                     // Delete the first 8 pages after the last page is saved
                     System.out.println("Optimizing...");
                     for (int i = 1; i <= 8; i++) {
-                        File fileToDelete = new File("temp/uncompressed/pdf_page_" + i + ".png");
+                        File fileToDelete = Paths.get("temp", "uncompressed", "pdf_page_" + i + ".png").toFile();
                         if (fileToDelete.exists()) {
                             if (fileToDelete.delete()) {
                                 System.out.println("Deleted duplicate page: " + fileToDelete.getName());
@@ -260,7 +262,7 @@ public class PdfPageImageSaver {
                                 continue;
                             }
 
-                            String filename = "temp/uncompressed/pdf_page_" + pageNumber + ".png";
+                            String filename = Paths.get("temp", "uncompressed", "pdf_page_" + pageNumber + ".png").toString();
                             ImageIO.write(image, "png", new File(filename));
                             System.out.println("Saved page " + pageNumber + " of " + totalPageCount);
 
