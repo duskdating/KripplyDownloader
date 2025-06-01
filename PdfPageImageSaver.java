@@ -4,6 +4,8 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.edge.EdgeDriver;
+import org.openqa.selenium.edge.EdgeOptions;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -22,9 +24,11 @@ import java.util.Set;
 public class PdfPageImageSaver {
 
     public static void main(String[] args) throws java.io.IOException {
-        // Determine the OS and set the appropriate path for ChromeDriver
+        // Determine the OS and set the appropriate path for the driver
         String os = System.getProperty("os.name").toLowerCase();
-        String driverPath = "resources/drivers/chromedriver"; // Default path
+
+        String browser = (args.length > 0) ? args[0].toLowerCase() : "chrome";
+        String driverPath = "resources/drivers/" + (browser.equals("edge") ? "msedgedriver" : "chromedriver");
 
         if (os.contains("win")) {
             driverPath += ".exe"; // Windows executable
@@ -37,16 +41,17 @@ public class PdfPageImageSaver {
             return; // Exit if the OS is unsupported
         }
 
-        // Set the path for the ChromeDriver executable
-        System.setProperty("webdriver.chrome.driver", driverPath);
-
-        // Optional: Run Chrome in headless mode
-        ChromeOptions options = new ChromeOptions();
-        // Comment out the headless option if you want to see the browser UI
-        // options.addArguments("--headless");
-
-        // Initialize WebDriver
-        WebDriver driver = new ChromeDriver(options);
+        WebDriver driver;
+        if (browser.equals("edge")) {
+            System.setProperty("webdriver.edge.driver", driverPath);
+            EdgeOptions options = new EdgeOptions();
+            driver = new EdgeDriver(options);
+        } else {
+            System.setProperty("webdriver.chrome.driver", driverPath);
+            ChromeOptions options = new ChromeOptions();
+            // options.addArguments("--headless");
+            driver = new ChromeDriver(options);
+        }
 
         // The target URL of the local index.html file
         String url = new File("index.html").getAbsolutePath();  // Gets the absolute path of the local index.html
