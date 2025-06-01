@@ -127,11 +127,22 @@ public class ChromeDriverDownloader {
                 System.out.println("Updating EdgeDriver...");
 
                 String latestDriverVersion = fetchLatestEdgeDriverVersion();
+                if (latestDriverVersion == null || latestDriverVersion.isEmpty()) {
+                    System.out.println("Failed to fetch the latest EdgeDriver version. Skipping update.");
+                    PdfPageImageSaver.main(new String[]{"edge"});
+                    return;
+                }
+
                 int latestDriverMajorVersion = Integer.parseInt(latestDriverVersion.split("\\.")[0]);
 
                 String driverVersion;
                 if (installedMajorVersion > latestDriverMajorVersion) {
                     driverVersion = fetchCompatibleEdgeDriverVersion(installedMajorVersion);
+                    if (driverVersion == null) {
+                        System.out.println("Could not find a compatible EdgeDriver version.");
+                        PdfPageImageSaver.main(new String[]{"edge"});
+                        return;
+                    }
                 } else {
                     driverVersion = latestDriverVersion;
                 }
