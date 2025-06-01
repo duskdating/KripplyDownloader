@@ -159,6 +159,9 @@ public class ChromeDriverDownloader {
             driverVersion = latestStable;
         }
 
+        // Remove any leading replacement characters or whitespace from the version
+        driverVersion = stripLeadingReplacementChars(driverVersion == null ? "" : driverVersion.trim());
+
         System.out.println("Resolved EdgeDriver version: " + driverVersion);
         String arch = System.getProperty("os.arch").toLowerCase();
         String downloadURL;
@@ -338,7 +341,7 @@ public class ChromeDriverDownloader {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new URL(url).openStream()))) {
             String line = reader.readLine();
-            return stripLeadingReplacementChars(line);
+            return stripLeadingReplacementChars(line == null ? null : line.trim());
         } catch (Exception e) {
             System.err.println("fetchLatestEdgeDriverVersion error: " + e.getMessage());
         }
@@ -355,7 +358,8 @@ public class ChromeDriverDownloader {
         String url = "https://msedgedriver.azureedge.net/LATEST_RELEASE_" + majorVersion;
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new URL(url).openStream()))) {
-            return reader.readLine();
+            String line = reader.readLine();
+            return stripLeadingReplacementChars(line == null ? null : line.trim());
         } catch (Exception e) {
             System.err.println("fetchCompatibleEdgeDriverVersion error: " + e.getMessage());
         }
@@ -423,22 +427,31 @@ public class ChromeDriverDownloader {
      * Downloads the file at fileURL to savePath (e.g. “edgedriver.zip”).
      */
     private static void downloadFile(String fileURL, String savePath) throws Exception {
-        HttpURLConnection httpConn = (HttpURLConnection) new URL(fileURL).openConnection();
-        int responseCode = httpConn.getResponseCode();
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-            try (BufferedInputStream in = new BufferedInputStream(httpConn.getInputStream());
-                 FileOutputStream out = new FileOutputStream(savePath)) {
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, bytesRead);
+        HttpURLConnection httpConn = null;
+        try {
+            httpConn = (HttpURLConnection) new URL(fileURL).openConnection(java.net.Proxy.NO_PROXY);
+            int responseCode = httpConn.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                try (BufferedInputStream in = new BufferedInputStream(httpConn.getInputStream());
+                     FileOutputStream out = new FileOutputStream(savePath)) {
+                    byte[] buffer = new byte[1024];
+                    int bytesRead;
+                    while ((bytesRead = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, bytesRead);
+                    }
                 }
+                System.out.println("File downloaded: " + savePath);
+            } else {
+                throw new IOException("Server returned non‑OK status: " + responseCode);
             }
-            System.out.println("File downloaded: " + savePath);
-        } else {
-            throw new IOException("Server returned non‑OK status: " + responseCode);
+        } catch (Exception e) {
+            System.out.println("Failed to download driver: " + e.getMessage());
+            throw e;
+        } finally {
+            if (httpConn != null) {
+                httpConn.disconnect();
+            }
         }
-        httpConn.disconnect();
     }
 
     /**
