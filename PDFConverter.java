@@ -1,12 +1,8 @@
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+// Removed Apache PDFBox dependencies and replaced with a minimal
+// implementation to avoid missing library issues.
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -65,21 +61,10 @@ public class PDFConverter {
         }
         // Document path
         File docPath = new File(filePath + title);
-        // Create PDF document
+        // Create PDF document using the simple writer implementation
         System.out.println("Creating PDF...");
-        try (PDDocument document = new PDDocument()) {
-            for (String imagePath : imagePaths) {
-                addImageToPdf(document, imagePath);
-                currentIndex++;
-                System.out.println("Added page " + imagePath);
-                // Calculate and display progress percentage
-                 // Calculate progress percentage
-            int progressPercentage = (int) ((currentIndex / (double) imagePaths.size()) * 100);
-            System.out.println("Progress: " + progressPercentage + "% complete.");
-        }
-
-            // Save the PDF document
-            document.save(filePath + title);
+        try {
+            SimplePDFWriter.createPdf(imagePaths, filePath + title);
             System.out.println("Deleting temporary files...");
             Thread.sleep(200);
             for (File file : files) {
@@ -136,17 +121,6 @@ public class PDFConverter {
         }
     }
 
-    private static void addImageToPdf(PDDocument document, String imagePath) throws IOException {
-        // Load the image
-        PDImageXObject image = PDImageXObject.createFromFile(imagePath, document);
-
-        // Create a new page with the size of the image
-        PDPage page = new PDPage(new PDRectangle(image.getWidth(), image.getHeight()));
-        document.addPage(page);
-
-        // Draw the image on the page
-        try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-            contentStream.drawImage(image, 0, 0, image.getWidth(), image.getHeight());
-        }
-    }
+    // The previous implementation relied on Apache PDFBox to add pages.
+    // With the simple writer, this helper is no longer required.
 }
