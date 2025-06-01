@@ -146,7 +146,7 @@ public class ChromeDriverDownloader {
         String latestStableMajor = rawMajor;
 
         String driverVersion;
-        if (Integer.toString(installedMajorVersion) != latestStableMajor) {
+        if (!Integer.toString(installedMajorVersion).equals(latestStableMajor)) {
             // Fetch a compatible driver for this major
             driverVersion = fetchCompatibleEdgeDriverVersion(installedMajorVersion);
             if (driverVersion == null) {
@@ -166,29 +166,29 @@ public class ChromeDriverDownloader {
         String arch = System.getProperty("os.arch").toLowerCase();
         String downloadURL;
 
-        // 2. Build the direct Microsoft download URL
+        // 2. Build the direct Edge download URL
         if (os.contains("win")) {
             if (arch.contains("aarch64") || arch.contains("arm")) {
                 downloadURL = String.format(
-                        "https://msedgedriver.microsoft.com/%s/edgedriver_arm64.zip",
+                        "https://msedgedriver.azureedge.net/%s/edgedriver_arm64.zip",
                         driverVersion);
             } else if (isWindows64Bit()) {
                 downloadURL = String.format(
-                        "https://msedgedriver.microsoft.com/%s/edgedriver_win64.zip",
+                        "https://msedgedriver.azureedge.net/%s/edgedriver_win64.zip",
                         driverVersion);
             } else {
                 downloadURL = String.format(
-                        "https://msedgedriver.microsoft.com/%s/edgedriver_win32.zip",
+                        "https://msedgedriver.azureedge.net/%s/edgedriver_win32.zip",
                         driverVersion);
             }
         } else if (os.contains("mac")) {
             if (arch.contains("aarch64") || arch.contains("arm")) {
                 downloadURL = String.format(
-                        "https://msedgedriver.microsoft.com/%s/edgedriver_mac64_m1.zip",
+                        "https://msedgedriver.azureedge.net/%s/edgedriver_mac64_m1.zip",
                         driverVersion);
             } else {
                 downloadURL = String.format(
-                        "https://msedgedriver.microsoft.com/%s/edgedriver_mac64.zip",
+                        "https://msedgedriver.azureedge.net/%s/edgedriver_mac64.zip",
                         driverVersion);
             }
         } else {
